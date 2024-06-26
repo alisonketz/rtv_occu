@@ -1,0 +1,10 @@
+.REnv
+.RProfile
+*.Rdata
+*.RData
+*.RDS
+*.rds
+*.png
+*.pdf
+figures/*
+results/*
