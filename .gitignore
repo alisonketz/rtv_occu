@@ -7,3 +7,4 @@
 *.png
 *.pdf
 figures/*
+.DS_Store
