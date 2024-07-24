@@ -6,25 +6,22 @@ df_long$state <- as.factor(df_long$state)
 levels(df_long$state) <- c(0,0,1,0,1)
 df_long$y <- as.numeric(as.character(df_long$state))
 df_long$y[is.na(df_long$y)] <- 0
-
 df_long$year <- df_long$year - min(df_long$year) + 1
 df_long$standno_t <- as.factor(df_long$standno_t)
 df_long$stand <- as.numeric(df_long$standno_t)
-# df_long$plotno<-as.factor(df_long$plotno)
-# df_long$plot<-as.numeric(df_long$plotno)
-
-
-### to check how many plots are within each stand
-extract_plotnos <- function(df) {
-  # Group by 'standno_t' and create a list of unique 'plotno' for each group
-  result <- df %>%
-    group_by(standno_t) %>%
-    summarise(plotnos = length(unique(plotno[!is.na(plotno)])))
-  return(result)
-}
-result <- extract_plotnos(df_long)
-
 df_long <- df_long  %>% mutate(plotno = as.numeric(as.character(plotno)))
+
+
+df_long_trans$state <- as.factor(df_long_trans$state)
+levels(df_long_trans$state) <- c(0,0,1,0,1)
+df_long_trans$y <- as.numeric(as.character(df_long_trans$state))
+df_long_trans$y[is.na(df_long_trans$y)] <- 0
+df_long_trans$year <- df_long_trans$year - min(df_long_trans$year) + 1
+df_long_trans$standno_t <- as.factor(df_long_trans$standno_t)
+df_long_trans$stand <- as.numeric(df_long_trans$standno_t)
+df_long_trans <- df_long_trans  %>% mutate(plotno = as.numeric(as.character(plotno)))
+
+
 
 ### Create a nested data frame with unique plots per stand
 df_long <- df_long %>%
@@ -32,8 +29,18 @@ df_long <- df_long %>%
   mutate(plot_id = as.numeric(factor(plotno, levels = unique(plotno)))) %>%
   ungroup()
 
+### Create a nested data frame with unique plots per nest
+df_long_trans <- df_long_trans %>%
+  group_by(standno_t) %>%
+  mutate(plot_id = as.numeric(factor(nesttag, levels = unique(nesttag)))) %>%
+  ungroup()
+
+
 df_long$z <- NA
 df_long$z[df_long$y == 1] <- 1
+df_long_trans$z <- NA
+df_long_trans$z[df_long_trans$y == 1] <- 1
+
 
 n_stands <- length(unique(df_long$stand))
 n_years <- max(df_long$year)

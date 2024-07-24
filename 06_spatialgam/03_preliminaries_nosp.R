@@ -155,7 +155,14 @@ age_surv_matrix_scaled[is.na(age_surv_matrix_scaled)] = 0
 dist_of_s_matrix[is.na(dist_of_s_matrix)] = 0
 ht_matrix[is.na(ht_matrix)] = 0
 
-age_surv_matrix_scaled
+
+df_long_trans$dist_of_t<- scale(df_long_trans$dist_of_t)
+df_long_trans$dist_of_s<- scale(df_long_trans$dist_of_s)
+df_long_trans$htlivcrown<- scale(df_long_trans$htlivcrown)
+df_long_trans$age_surv<- scale(df_long_trans$age_surv)
+
+
+
 ###-----------------------------------------------------------------------------
 ### Detection ~ “age_surv” (if we can have the same covariates in each model) +
 ### “htnest1_m” (this would be the nest height, but if we have data, that means we found a nest so might not be that interesting, 
@@ -242,6 +249,7 @@ temp_flat_age_surv <- as.vector(age_surv_array)
 scaled_temp_flat_age_surv <- scale(temp_flat_age_surv)
 scaled_age_surv_array <- array(scaled_temp_flat_age_surv, dim = c(n_stands, n_years, n_plots))
 scaled_age_surv_array[is.na(scaled_age_surv_array)] = 0
+ht_array[is.na(ht_array)] = 0
 
 table(which(y_array == 1, arr.ind = TRUE)[,1])
 #  1  2  3  5  6  7  8  9 10 11 13 14 16 17 22 33 34 36 38 40 41 42 44 51 53 61 68 73 75 

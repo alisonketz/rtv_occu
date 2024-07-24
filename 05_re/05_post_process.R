@@ -7,8 +7,8 @@
 
 out <- mcmcout$samples
 fit_sum <- mcmcout$summary$all.chains
-waic_04 <- mcmcout$WAIC
-save(waic_04,file = "results/waic_04.Rdata")
+waic_05 <- mcmcout$WAIC
+save(waic_05,file = "results/waic_05.Rdata")
 
 #traceplots and density plots
 MCMCtrace(out, filename = "figures/traceplot.pdf")

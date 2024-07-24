@@ -270,7 +270,7 @@ df_long_trans$age_surv
 
 table(df_long$standno_t)
 head(df_long)
-df_long %>% filter(standno_t == 613)
+df_long%>%filter(standno_t == 613)
 rm = c()
 for (i in 1:nrow(df_long)){
   if(is.na(df_long$gps_y19_x[i]) & df_long$year[i] == 2019 & is.na(df_long$state[i])) rm = c(rm,i)

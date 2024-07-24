@@ -60,9 +60,39 @@ table(df_rtv$y22_treety)
 ### a vole in a nest as the ratio between the nest and live crown [“htnest1_m” - “htlivcrown”]). 
 ###-----------------------------------------------------------------------------
 
-df_vole <- df_rtv %>% dplyr::select(unique_id,standno_t,treetag_t,nesttag,y19_volesi,y20_volesi,y21_volesi,y22_volesi,y23_volesi, age_surv, dist_of_t, dist_of_s,htnest1_m, htlivcrown)
+df_vole <- df_rtv %>% dplyr::select(unique_id,
+                                    standno_t,
+                                    treetag_t,
+                                    nesttag,
+                                    y19_volesi,
+                                    y20_volesi,
+                                    y21_volesi,
+                                    y22_volesi,
+                                    y23_volesi,
+                                    age_surv,
+                                    dist_of_t,
+                                    dist_of_s,
+                                    htnest1_m,
+                                    htlivcrown,
+                                    y19_x, y19_y,
+                                    y20_x, y20_y,
+                                    y21_x, y21_y,
+                                    y22_x, y22_y,
+                                    y23_x, y23_y
+                                    )
 df_vole$plotno <- plotno
 df_vole <- df_vole %>% relocate(plotno, .after = standno_t)
+
+df_vole <- df_vole %>% rename(gps_y19_x = y19_x, gps_y19_y = y19_y,
+                                    gps_y20_x = y20_x, gps_y20_y = y20_y,
+                                    gps_y21_x = y21_x, gps_y21_y = y21_y,
+                                    gps_y22_x = y22_x, gps_y22_y = y22_y,
+                                    gps_y23_x = y23_x, gps_y23_y = y23_y
+)
+
+df_vole_plot <- df_vole %>% drop_na(plotno)
+df_vole_trans <- df_vole %>% filter(is.na(plotno))
+
 
 
 ### there are 181 duplicated rows for unique_id
@@ -98,16 +128,16 @@ select_highest_nesttag <- function(values) {
 }
 
 # Identify duplicated unique_id
-duplicated_ids <- df_vole %>%
+duplicated_ids <- df_vole_trans %>%
   group_by(unique_id) %>%
   filter(n() > 1) %>%
   pull(unique_id)
 
 # Aggregate the duplicated rows
-aggregated_df <- df_vole %>%
+aggregated_df <- df_vole_trans %>%
   filter(unique_id %in% duplicated_ids) %>%
   group_by(unique_id) %>%
-  summarize(
+  reframe(
     standno_t = first(standno_t),
     plotno = first(plotno),
     treetag_t = first(treetag_t),
@@ -115,26 +145,51 @@ aggregated_df <- df_vole %>%
     age_surv = first(age_surv),
     dist_of_t = first(dist_of_t),
     dist_of_s = first(dist_of_s),
-    htnest1_m = first(htnest1_m), 
+    htnest1_m = first(htnest1_m),
     htlivcrown = first(htlivcrown),
     across(starts_with("y"), ~ select_highest_priority(.)),
+    across(starts_with("gps"), ~ first(.)),
     .groups = 'drop'
   )
 
 # Combine the aggregated rows with the rest of the dataframe
-df_vole <- df_vole %>%
-  filter(!unique_id %in% duplicated_ids) %>%
-  bind_rows(aggregated_df)
+# df_vole <- df_vole %>%
+#   filter(!unique_id %in% duplicated_ids) %>%
+#   bind_rows(aggregated_df)
 
-# View the result
-print(df_vole)
-df_vole[df_vole$unique_id == "508-6578",]
+
+#why are there missing stand ages? 
+### imputing missing stand ages and htlivcrown grouped by stand ages
+stands <- unique(df_vole_plot$standno_t)
+
+for (i in stands){
+  temp <- df_vole_plot$age_surv[df_vole_plot$standno_t==i]
+  temp2 <- df_vole_plot$htlivcrown[df_vole_plot$standno_t==i]
+  mn_stand_age <- mean(temp,na.rm = TRUE)
+  mn_stand_ht <- mean(temp2,na.rm = TRUE)
+  df_vole_plot$age_surv[df_vole_plot$standno_t==i & is.nan(df_vole_plot$age_surv)] <- mn_stand_age
+  df_vole_plot$htlivcrown[df_vole_plot$standno_t==i & is.nan(df_vole_plot$htlivcrown)] <- mn_stand_ht
+}
+
+df_vole_plot$age_surv[is.nan(df_vole_plot$age_surv)] <- mean(df_vole_plot$age_surv[!is.nan(df_vole_plot$age_surv)])
+df_vole_plot$age_surv[is.na(df_vole_plot$age_surv)] <- mean(df_vole_plot$age_surv[!is.na(df_vole_plot$age_surv)])
 
 
 
 #why are there missing stand ages? 
+### imputing missing stand ages and htlivcrown grouped by stand ages
+stands <- unique(df_vole_trans$standno_t)
 
-df_vole$age_surv[is.na(df_vole$age_surv)] <- mean(df_vole$age_surv[!is.na(df_vole$age_surv)])
+for (i in stands){
+  temp <- df_vole_trans$age_surv[df_vole_trans$standno_t==i]
+  temp2 <- df_vole_trans$htlivcrown[df_vole_trans$standno_t==i]
+  mn_stand_age <- mean(temp,na.rm = TRUE)
+  mn_stand_ht <- mean(temp2,na.rm = TRUE)
+  df_vole_trans$age_surv[df_vole_trans$standno_t==i & is.nan(df_vole_trans$age_surv)] <- mn_stand_age
+  df_vole_trans$htlivcrown[df_vole_trans$standno_t==i & is.nan(df_vole_trans$htlivcrown)] <- mn_stand_ht
+}
+
+df_vole_trans$age_surv[is.na(df_vole_trans$age_surv)] <- mean(df_vole_trans$age_surv[!is.na(df_vole_trans$age_surv)])
 
 
 ###---------------------------------------------------------------------------------------
@@ -146,8 +201,8 @@ df_vole$age_surv[is.na(df_vole$age_surv)] <- mean(df_vole$age_surv[!is.na(df_vol
 ###---------------------------------------------------------------------------------------
 
 ### Select the columns of interest
-selected_df <- df_vole %>%
-  select(unique_id, standno_t, treetag_t, nesttag, plotno,age_surv, dist_of_t, dist_of_s,htnest1_m, htlivcrown, starts_with("y"))
+selected_df <- df_vole_plot %>%
+  select(unique_id, standno_t, treetag_t, nesttag, plotno,age_surv, dist_of_t, dist_of_s,htnest1_m, htlivcrown, starts_with("y"), starts_with("gps"))
 
 ### Pivot longer to convert vole sign columns into year and state
 df_long <- selected_df %>%
@@ -166,16 +221,69 @@ df_long <- selected_df %>%
 df_long <- df_long %>%
   mutate(year = as.numeric(year))
 
-### removing plotno that are NA for now,
-### in more complicated models I will use alternative poisson distribution
-df_long <- df_long  %>%  drop_na(plotno)
 
+### Select the columns of interest for transect data
+selected_df <- df_vole_trans %>%
+  select(unique_id, standno_t, treetag_t, nesttag, plotno,age_surv, dist_of_t, dist_of_s,htnest1_m, htlivcrown, starts_with("y"), starts_with("gps"))
+
+### Pivot longer to convert vole sign columns into year and state
+df_long_trans <- selected_df %>%
+  pivot_longer(
+    cols = starts_with("y"),
+    names_to = "year",
+    names_prefix = "y",
+    values_to = "state"
+  ) %>%
+ mutate(
+   # Convert to full year
+    year = as.numeric(str_remove(str_remove(year, "y"), "_volesi")) + 2000 
+  )
+
+### Convert year to numeric
+df_long_trans <- df_long_trans %>%
+  mutate(year = as.numeric(year))
+
+### adjusting the age of the stand 
+### based on knowning the age of the stand at the start of the study
 
 df_long <- df_long %>%
   mutate(age_surv = case_when(
-    year == 2 ~ age_surv + 1,
-    year == 3 ~ age_surv + 2,
-    year == 4 ~ age_surv + 3,
-    year == 5 ~ age_surv + 4,
+    year == 2020 ~ age_surv + 1,
+    year == 2021 ~ age_surv + 2,
+    year == 2022 ~ age_surv + 3,
+    year == 2023 ~ age_surv + 4,
     TRUE ~ age_surv
   ))
+
+df_long_trans <- df_long_trans %>%
+  mutate(age_surv = case_when(
+    year == 2020 ~ age_surv + 1,
+    year == 2021 ~ age_surv + 2,
+    year == 2022 ~ age_surv + 3,
+    year == 2023 ~ age_surv + 4,
+    TRUE ~ age_surv
+  ))
+
+table(df_long$standno_t)
+head(df_long)
+df_long%>%filter(standno_t == 613)
+rm = c()
+for (i in 1:nrow(df_long)){
+  if(is.na(df_long$gps_y19_x[i]) & df_long$year[i] == 2019 & is.na(df_long$state[i])) rm = c(rm,i)
+  if(is.na(df_long$gps_y20_x[i]) & df_long$year[i] == 2020 & is.na(df_long$state[i])) rm = c(rm,i)
+  if(is.na(df_long$gps_y21_x[i]) & df_long$year[i] == 2021 & is.na(df_long$state[i])) rm = c(rm,i)
+  if(is.na(df_long$gps_y22_x[i]) & df_long$year[i] == 2022 & is.na(df_long$state[i])) rm = c(rm,i)
+  if(is.na(df_long$gps_y23_x[i]) & df_long$year[i] == 2023 & is.na(df_long$state[i])) rm = c(rm,i)
+}
+df_long <- df_long[-rm,]
+dim(df_long)
+
+rm = c()
+for (i in 1:nrow(df_long_trans)){
+  if(is.na(df_long_trans$gps_y19_x[i]) & df_long_trans$year[i] == 2019 & is.na(df_long_trans$state[i])) rm = c(rm,i)
+  if(is.na(df_long_trans$gps_y20_x[i]) & df_long_trans$year[i] == 2020 & is.na(df_long_trans$state[i])) rm = c(rm,i)
+  if(is.na(df_long_trans$gps_y21_x[i]) & df_long_trans$year[i] == 2021 & is.na(df_long_trans$state[i])) rm = c(rm,i)
+  if(is.na(df_long_trans$gps_y22_x[i]) & df_long_trans$year[i] == 2022 & is.na(df_long_trans$state[i])) rm = c(rm,i)
+  if(is.na(df_long_trans$gps_y23_x[i]) & df_long_trans$year[i] == 2023 & is.na(df_long_trans$state[i])) rm = c(rm,i)
+}
+df_long_trans <- df_long_trans[-rm,]

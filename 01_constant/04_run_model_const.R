@@ -30,9 +30,9 @@ modelcode <- nimbleCode( {
 params <- c("psi", "p") 
 
 ### MCMC setting
-n_iter <- 5000
+n_iter <- 10000
 n_thin <- 1
-n_burnin <- 1000
+n_burnin <- 5000
 n_chains <- 3
 
 ### Data

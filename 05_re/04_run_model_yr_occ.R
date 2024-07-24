@@ -1,18 +1,26 @@
-
 # Define the NIMBLE model code
 modelcode <- nimbleCode({
   
   # Prior for detection probability
   beta0_p ~ dnorm(beta0_p_prior[1], 1 / beta0_p_prior[2]^2)
-  # for (k in 1:n_covs_p) {
-  #   beta_p[k] ~ dnorm(0, 1 / 2.89)
-  # }
+  # beta0_p ~ dnorm(0, 1 / 2.89)
+  for (k in 1:n_covs_p) {
+    beta_p[k] ~ dnorm(0, 1 / 2.89)
+  }
   
   # Prior for occupancy probability
   beta0_psi ~ dnorm(0, 1 / 2.89)
   for (k in 1:n_covs_psi) {
     beta_psi[k] ~ dnorm(0, 1 / 2.89)
   }
+
+  ### Hyperparameter priors for random effect precision
+  # tau_plot ~ dgamma(0.001, 0.001)  # Precision for the plot random effect
+  # sigma_plot <- 1 / sqrt(tau_plot)  # Standard deviation for the plot random effect
+  # Prior for the standard deviation using a half-Cauchy distribution
+  sigma_plot ~ T(dt(0, scale_plot, 1), 0, )  # Truncated t-distribution at 0
+  tau_plot <- 1 / (sigma_plot^2)  # Precision for the plot random effect
+
 
   for (j in 1:n_stands) {
     for (t in 1:n_years) {
@@ -29,8 +37,9 @@ modelcode <- nimbleCode({
     for (t in 1:n_years) {
       if(num_plots[j,t]>0){
         for (i in 1:num_plots[j,t]) {
-          p_detect[j, t, i] <- ilogit(beta0_p) #+ beta_p[1] * age_surv_array[j, t, i] #+  beta_p[2] * ht_array[j, t, i] 
-          y_array[j, t, i] ~ dbern(Z[j, t] * p_detect[j, t, i])
+                plot_effect[j, t, i] ~ dnorm(0, tau_plot)  # Random effect for each plot
+                logit(p_detect[j, t, i]) <- beta0_p + beta_p[1] * age_surv_array[j, t, i] + beta_p[2] * ht_array[j, t, i] + plot_effect[j, t, i] 
+                y_array[j, t, i] ~ dbern(Z[j, t] * p_detect[j, t, i])
         }
       }
     }
@@ -43,9 +52,9 @@ modelcode <- nimbleCode({
 # Create the data list for NIMBLE
 nimData <- list(
   y_array = y_array,
-  # age_surv_array = scaled_age_surv_array,
-  # ht_array = ht_array,
-  age_surv = age_surv_matrix_scaled,
+  age_surv_array = scaled_age_surv_array,
+  ht_array = ht_array,
+  age_surv = age_surv_matrix,
   # dist_of_t = dist_of_t_matrix,
   dist_of_s = dist_of_s_matrix
 )
@@ -59,18 +68,22 @@ nimConsts <- list(
   num_plots = num_plots,
   # yr = as.integer(df_long$year),
   beta0_p_prior = beta0_p_prior,
-  n_covs_psi = 2#,
-  # n_covs_p = 1
-   )
+  n_covs_psi = 2,
+  n_covs_p = 2,
+  scale_plot = 1.5  # Scale parameter for the half-Cauchy prior
+  )
 
 # Define initial values for the model
 initsFun <- function() list(
   psi = matrix(runif(n_stands * n_years), nrow = n_stands, ncol = n_years),
   Z = Z_init,
+  plot_effect = array(0, dim = c(n_stands, n_years, max(num_plots))),
+  tau_plot = 1,  # Initial value for the precision parameter
   beta0_p = rnorm(1, beta0_p_prior[1], beta0_p_prior[2]),
-  # beta_p = runif(1,0,.00001),
+  beta_p = runif(2,0,.00001),
   beta_psi = rnorm(2,0,1),
-  beta0_psi = rnorm(1,0,1)
+  beta0_psi = rnorm(1,0,1),
+  sigma_plot = runif(1,.1,.2)
 )
 nimInits <- initsFun()
 
@@ -80,21 +93,21 @@ Rmodel <- nimbleModel(code = modelcode,
                       inits = initsFun()
                       )# nolint: indentation_linter.
 
-### Parameters monitored 
+#identify params to monitor
 parameters <- c(
   # "psi",
   "beta0_p",
   "beta0_psi",
-  # "beta_p",
-  "beta_psi"
+  "beta_p",
+  "beta_psi",
+  "sigma_plot"
 )
 
-### MCMC setting
-n_iter <- 50000
-n_thin <- 1
-n_burnin <- 25000
+### MCMC settings
+n_iter <- 100000
+n_thin <- 10
+n_burnin <- 50000
 n_chains <- 3
-
 
 starttime <- Sys.time()
 confMCMC <- configureMCMC(Rmodel,

@@ -3,7 +3,7 @@
 modelcode <- nimbleCode({
   
   # Prior for detection probability
-  beta0_p ~ dnorm(beta0_prior[1], 1 / beta0_prior[2]^2)
+  beta0_p ~ dnorm(beta0_p_prior[1], 1 / beta0_p_prior[2]^2)
   # beta0_p ~ dnorm(0, 1 / 2.89)
   for (k in 1:n_covs_p) {
     beta_p[k] ~ dnorm(0, 1 / 2.89)
@@ -28,9 +28,11 @@ modelcode <- nimbleCode({
   # Likelihood
   for (j in 1:n_stands) {
     for (t in 1:n_years) {
-      for (i in 1:num_plots[j,t]) {
-        logit(p_detect[j, t, i]) <- beta0_p + beta_p[1] * age_surv_array[j, t, i] + beta_p[2] * ht_array[j, t, i] 
-        y_array[j, t, i] ~ dbern(Z[j, t] * p_detect[j, t, i])
+      if(num_plots[j,t]>0){
+        for (i in 1:num_plots[j,t]) {
+          logit(p_detect[j, t, i]) <- beta0_p + beta_p[1] * age_surv_array[j, t, i] + beta_p[2] * ht_array[j, t, i] 
+          y_array[j, t, i] ~ dbern(Z[j, t] * p_detect[j, t, i])
+        }
       }
     }
   }
@@ -39,21 +41,12 @@ modelcode <- nimbleCode({
   # sum.z <- sum(Z[ , ])  # Total number of occupied stands (optional)
 })
 
-### Parameters monitored 
-params <- c("psi", "p_detect", "beta0_p", "beta0_psi", "beta_p", "beta_psi")
-
-### MCMC setting
-n_iter <- 80000
-n_thin <- 1
-n_burnin <- 40000
-n_chains <- 3
-
 # Create the data list for NIMBLE
 nimData <- list(
   y_array = y_array,
   age_surv_array = scaled_age_surv_array,
   ht_array = ht_array,
-  age_surv = age_surv_matrix,
+  age_surv = age_surv_matrix_scaled,
   # dist_of_t = dist_of_t_matrix,
   dist_of_s = dist_of_s_matrix
 )
@@ -66,7 +59,7 @@ nimConsts <- list(
   # stand = as.integer(df_long$stand),
   num_plots = num_plots,
   # yr = as.integer(df_long$year),
-  beta0_prior = beta0_prior,
+  beta0_p_prior = beta0_p_prior,
   n_covs_psi = 2,
   n_covs_p = 2
    )
@@ -75,7 +68,7 @@ nimConsts <- list(
 initsFun <- function() list(
   psi = matrix(runif(n_stands * n_years), nrow = n_stands, ncol = n_years),
   Z = Z_init,
-  beta0_p = rnorm(1, beta0_prior[1], beta0_prior[2]),
+  beta0_p = rnorm(1, beta0_p_prior[1], beta0_p_prior[2]),
   beta_p = runif(2,0,.00001),
   beta_psi = rnorm(2,0,1),
   beta0_psi = rnorm(1,0,1)
@@ -96,6 +89,14 @@ parameters <- c(
   "beta_p",
   "beta_psi"
 )
+
+### MCMC settings
+n_iter <- 200000
+n_thin <- 1
+n_burnin <- 100000
+n_chains <- 3
+
+
 starttime <- Sys.time()
 confMCMC <- configureMCMC(Rmodel,
                           monitors = parameters,

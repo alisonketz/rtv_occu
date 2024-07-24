@@ -267,10 +267,19 @@ df_long_trans <- df_long_trans %>%
 df_long_trans$age_surv
 
 ### removing lines where there's no geographic information i.e. no gps point in the year of the data
+# rm1<- which(is.na(df_long_trans$gps_y19_x)) [which(which(is.na(df_long_trans$gps_y19_x)) %in% which(df_long_trans$year == 2019))]
+# rm2 <- which(is.na(df_long_trans$gps_y20_x)) [which(which(is.na(df_long_trans$gps_y20_x)) %in% which(df_long_trans$year == 2020))]
+# rm3 <- which(is.na(df_long_trans$gps_y21_x)) [which(which(is.na(df_long_trans$gps_y21_x)) %in% which(df_long_trans$year == 2021))]
+# rm4 <- which(is.na(df_long_trans$gps_y22_x)) [which(which(is.na(df_long_trans$gps_y22_x)) %in% which(df_long_trans$year == 2022))]
+# rm5 <- which(is.na(df_long_trans$gps_y23_x)) [which(which(is.na(df_long_trans$gps_y23_x)) %in% which(df_long_trans$year == 2023))]
+
+
+# df_long_trans <- df_long_trans[-c(rm1,rm2,rm3,rm4,rm5),]
+
 
 table(df_long$standno_t)
 head(df_long)
-df_long %>% filter(standno_t == 613)
+df_long%>%filter(standno_t == 613)
 rm = c()
 for (i in 1:nrow(df_long)){
   if(is.na(df_long$gps_y19_x[i]) & df_long$year[i] == 2019 & is.na(df_long$state[i])) rm = c(rm,i)
